@@ -29,6 +29,12 @@
     return names[tonic] + " " + mode;
   }
 
+  // Camelot wheel: major = B, minor = A; a minor key shares its number with its relative major.
+  function camelot(tonic, mode) {
+    const majorTonic = mode === "major" ? tonic : (tonic + 3) % 12;
+    return ((majorTonic * 7 + 7) % 12) + 1 + (mode === "major" ? "B" : "A");
+  }
+
   function spellScale(tonic, mode) {
     const names = prefersFlats(tonic, mode) ? FLAT_NAMES : SHARP_NAMES;
     const steps = mode === "major" ? MAJOR_STEPS : MINOR_STEPS;
@@ -129,6 +135,7 @@
     estimateKey: estimateKey,
     spellScale: spellScale,
     keyName: keyName,
+    camelot: camelot,
     chromaFromMagnitudes: chromaFromMagnitudes,
     chromaFromDecibels: chromaFromDecibels,
   };

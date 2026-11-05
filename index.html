@@ -15,8 +15,29 @@
 
       <section class="controls">
         <button id="listen" type="button">Start listening</button>
+        <div id="transport" class="transport" hidden>
+          <button id="pause" type="button" class="icon-button" aria-pressed="false" aria-label="Pause: keep listening but freeze the key" title="Pause (keep listening, freeze the key)">
+            <svg class="icon-pause" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M6 4h4v16H6zM14 4h4v16h-4z" /></svg>
+            <svg class="icon-resume" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M7 4l13 8-13 8z" /></svg>
+          </button>
+          <button id="stop" type="button" class="icon-button" aria-label="Stop listening" title="Stop listening">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M5 5h14v14H5z" /></svg>
+          </button>
+        </div>
         <div class="meter" aria-hidden="true"><span id="level"></span></div>
+        <button id="pick-toggle" type="button" class="secondary" aria-expanded="false" aria-controls="key-picker">Choose a key</button>
         <p id="status" role="status">Microphone is off.</p>
+      </section>
+
+      <section id="key-picker" class="key-picker" hidden>
+        <div class="picker-row">
+          <span class="picker-label">Major</span>
+          <div id="pick-major" class="picker-keys"></div>
+        </div>
+        <div class="picker-row">
+          <span class="picker-label">Minor</span>
+          <div id="pick-minor" class="picker-keys"></div>
+        </div>
       </section>
 
       <section class="result" aria-live="polite">

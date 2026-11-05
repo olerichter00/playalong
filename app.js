@@ -4,7 +4,7 @@
   const WHITE_PCS = new Set([0, 2, 4, 5, 7, 9, 11]);
   const SILENCE_RMS = 0.004;
   const SMOOTHING = 0.035;
-  const MIN_SCORE = 0.55;
+  const MIN_SCORE = 0.4;
   const HOLD_MS = 1200;
 
   const listenButton = document.getElementById("listen");
@@ -15,6 +15,12 @@
   const confidenceEl = document.getElementById("confidence");
   const pianoEl = document.getElementById("piano");
 
+  const transportEl = document.getElementById("transport");
+  const pauseButton = document.getElementById("pause");
+  const stopButton = document.getElementById("stop");
+  const pickToggle =document.getElementById("pick-toggle");
+  const pickerEl = document.getElementById("key-picker");
+  const pickerButtons = [];
   const keyEls = [];
   let audio = null;
   let chroma = new Float64Array(12);
@@ -23,6 +29,22 @@
   let pendingSince = 0;
   let heardMs = 0;
   let starting = false;
+  let paused = false;
+
+  function setListeningUi(on) {
+    listenButton.hidden = on;
+    transportEl.hidden = !on;
+  }
+
+  function setPaused(value) {
+    paused = value;
+    pending = null;
+    pauseButton.setAttribute("aria-pressed", String(value));
+    const label = value ? "Resume: detect the key again" : "Pause: keep listening but freeze the key";
+    pauseButton.setAttribute("aria-label", label);
+    pauseButton.title = label;
+    if (audio) statusEl.textContent = value ? "Paused. The key is frozen." : "Listening.";
+  }
 
   function midiToPc(midi) {
     return ((midi % 12) + 12) % 12;
@@ -63,7 +85,7 @@
     }
   }
 
-  function renderKeyName(name) {
+  function renderKeyName(name, tonic, mode) {
     keyNameEl.replaceChildren();
     const match = /^([A-G])([♯♭𝄪𝄫]?) (major|minor)$/u.exec(name || "");
     if (!match) {
@@ -78,12 +100,19 @@
       keyNameEl.append(accidental);
     }
     keyNameEl.append(" " + match[3]);
+    if (tonic != null) {
+      const camelot = document.createElement("span");
+      camelot.className = "camelot";
+      camelot.textContent = "(" + KeyFinder.camelot(tonic, mode) + ")";
+      keyNameEl.append(" ", camelot);
+    }
   }
 
   function showKey(detection) {
     if (!detection) {
       renderKeyName("");
-      notesEl.textContent = "Play on your keyboard to detect the key.";
+      notesEl.textContent = "";
+      markPicked(null);
       confidenceEl.textContent = "";
       pianoEl.setAttribute("aria-label", "Piano keyboard. No scale highlighted yet.");
       for (const el of keyEls) {
@@ -94,8 +123,9 @@
       return;
     }
 
+    markPicked(detection);
     const byPc = new Map(detection.notes.map((note) => [note.pc, note.label]));
-    renderKeyName(detection.name);
+    renderKeyName(detection.name, detection.tonic, detection.mode);
     notesEl.textContent = detection.notes.map((note) => note.label).join("  ·  ");
     const match = Math.round(Math.max(0, detection.score) * 100);
     let detail = match + "% match";
@@ -122,7 +152,7 @@
   function consider(detection, now) {
     if (detection.score < MIN_SCORE) return;
     if (!shown) {
-      if (heardMs < 700) return;
+      if (heardMs < 400) return;
       shown = detection;
       showKey(detection);
       statusEl.textContent = "Listening.";
@@ -162,8 +192,9 @@
     chroma = new Float64Array(12);
     pending = null;
     heardMs = 0;
-    listenButton.textContent = "Start listening";
-    listenButton.setAttribute("aria-pressed", "false");
+    paused = false;
+    setPaused(false);
+    setListeningUi(false);
     levelEl.style.transform = "scaleX(0)";
     statusEl.textContent = shown ? "Stopped. The last key is still shown." : "Microphone is off.";
   }
@@ -207,8 +238,7 @@
     showKey(null);
 
     audio = { context, stream, analyser, raf: 0 };
-    listenButton.textContent = "Stop listening";
-    listenButton.setAttribute("aria-pressed", "true");
+    setListeningUi(true);
     statusEl.textContent = "Listening. Play along on your keyboard.";
 
     let last = 0;
@@ -221,6 +251,7 @@
       analyser.getFloatTimeDomainData(timeData);
       const rms = rmsOf(timeData);
       levelEl.style.transform = "scaleX(" + Math.min(1, rms * 12).toFixed(3) + ")";
+      if (paused) return;
       if (rms < SILENCE_RMS) {
         if (!shown) statusEl.textContent = "Listening. Waiting for audio.";
         return;
@@ -233,13 +264,65 @@
         chroma[i] = chroma[i] * (1 - SMOOTHING) + frame[i] * SMOOTHING;
       }
       consider(KeyFinder.estimateKey(chroma), now);
+      if (!shown) statusEl.textContent = "Listening. Hearing audio, finding the key…";
     };
     audio.raf = requestAnimationFrame(loop);
     starting = false;
   }
 
+  function markPicked(detection) {
+    for (const button of pickerButtons) {
+      const on = !!detection && Number(button.dataset.tonic) === detection.tonic && button.dataset.mode === detection.mode;
+      button.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+  }
+
+  function pickKey(tonic, mode) {
+    if (audio) stop();
+    pending = null;
+    shown = {
+      tonic: tonic,
+      mode: mode,
+      score: 1,
+      margin: 1,
+      name: KeyFinder.keyName(tonic, mode),
+      notes: KeyFinder.spellScale(tonic, mode),
+      runnerUp: null,
+      manual: true,
+    };
+    showKey(shown);
+    confidenceEl.textContent = "Chosen manually";
+    statusEl.textContent = "Showing the chosen key. Start listening to detect again.";
+  }
+
+  function buildPicker() {
+    for (const mode of ["major", "minor"]) {
+      const row = document.getElementById("pick-" + mode);
+      for (let tonic = 0; tonic < 12; tonic++) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "pick";
+        button.dataset.tonic = String(tonic);
+        button.dataset.mode = mode;
+        button.setAttribute("aria-pressed", "false");
+        button.textContent = KeyFinder.keyName(tonic, mode).split(" ")[0];
+        button.addEventListener("click", () => pickKey(tonic, mode));
+        row.appendChild(button);
+        pickerButtons.push(button);
+      }
+    }
+    pickToggle.addEventListener("click", () => {
+      const open = pickerEl.hidden;
+      pickerEl.hidden = !open;
+      pickToggle.setAttribute("aria-expanded", String(open));
+    });
+  }
+
   buildPiano();
+  buildPicker();
   listenButton.addEventListener("click", start);
+  stopButton.addEventListener("click", stop);
+  pauseButton.addEventListener("click", () => setPaused(!paused));
 
   // Used by the page check to render a known detection without a microphone.
   window.__showDetection = function (tonic, mode, score) {

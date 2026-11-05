@@ -68,6 +68,74 @@ button:focus-visible {
 
 button[aria-pressed="true"] { background: var(--scale); }
 
+.transport { display: flex; gap: 8px; }
+
+.transport[hidden] { display: none; }
+
+button.icon-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+#pause .icon-resume,
+#pause[aria-pressed="true"] .icon-pause { display: none; }
+
+#pause[aria-pressed="true"] .icon-resume { display: block; }
+
+button.secondary {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+button.secondary:hover { background: rgba(0, 0, 0, 0.06); }
+
+.key-picker { margin: 12px 0 0; }
+
+.key-picker[hidden] { display: none; }
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.picker-label {
+  width: 44px;
+  color: var(--muted);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.picker-keys {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+button.pick {
+  min-width: 44px;
+  padding: 8px 10px;
+  font-size: 15px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+button.pick:hover { background: #ece6d8; }
+
+button.pick[aria-pressed="true"] {
+  background: var(--scale);
+  color: #fff;
+}
+
 .meter {
   width: 120px;
   height: 8px;
@@ -116,6 +184,13 @@ button[aria-pressed="true"] { background: var(--scale); }
   margin-left: 1px;
   position: relative;
   top: -0.42em;
+}
+
+#key-name .camelot {
+  font-size: 0.32em;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0;
 }
 
 #scale-notes,
