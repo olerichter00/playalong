@@ -32,7 +32,7 @@ h1 {
 
 header p {
   margin: 0;
-  max-width: 38rem;
+  max-width: 46rem;
   color: var(--muted);
   font-family: system-ui, sans-serif;
   font-size: 16px;
