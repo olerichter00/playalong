@@ -278,7 +278,7 @@
   }
 
   function pickKey(tonic, mode) {
-    if (audio) stop();
+    if (audio) setPaused(true);
     pending = null;
     shown = {
       tonic: tonic,
@@ -292,7 +292,9 @@
     };
     showKey(shown);
     confidenceEl.textContent = "Chosen manually";
-    statusEl.textContent = "Showing the chosen key. Start listening to detect again.";
+    statusEl.textContent = audio
+      ? "Paused on the chosen key. Resume to detect again."
+      : "Showing the chosen key. Start listening to detect again.";
   }
 
   function buildPicker() {
@@ -322,7 +324,11 @@
   buildPicker();
   listenButton.addEventListener("click", start);
   stopButton.addEventListener("click", stop);
-  pauseButton.addEventListener("click", () => setPaused(!paused));
+  pauseButton.addEventListener("click", () => {
+    // Resuming after a manual pick lets detection take over again.
+    if (paused && shown && shown.manual) shown = null;
+    setPaused(!paused);
+  });
 
   // Used by the page check to render a known detection without a microphone.
   window.__showDetection = function (tonic, mode, score) {
